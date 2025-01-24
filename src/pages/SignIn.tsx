@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Language, UserRole } from '../App';
 import { translations } from '../translations';
+import GoogleOneTap from '../components/GoogleOneTap';
 
 interface SignInProps {
   language: Language;
@@ -95,6 +96,19 @@ const SignIn = ({ language, setUserRole }: SignInProps) => {
             {t.signIn}
           </button>
         </form>
+
+        {/* Add divider */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-gray-500">Or continue with</span>
+          </div>
+        </div>
+
+        {/* Google One Tap */}
+        <GoogleOneTap />
       </div>
     </div>
   );
