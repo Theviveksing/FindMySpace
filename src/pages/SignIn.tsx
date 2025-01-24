@@ -97,7 +97,6 @@ const SignIn = ({ language, setUserRole }: SignInProps) => {
           </button>
         </form>
 
-        {/* Add divider */}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-300"></div>
@@ -107,8 +106,7 @@ const SignIn = ({ language, setUserRole }: SignInProps) => {
           </div>
         </div>
 
-        {/* Google One Tap */}
-        <GoogleOneTap />
+        <GoogleOneTap setUserRole={setUserRole} />
       </div>
     </div>
   );
