@@ -29,42 +29,26 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
           return;
         }
 
-        window.google.accounts.id.initialize({
-          client_id: '950012420743-a8udl7bn6kent06mn64k18poktm33r4d.apps.googleusercontent.com',
-          callback: handleGoogleSignIn,
-          auto_select: false,
-          cancel_on_tap_outside: true,
-          context: 'signin'
+        const { data: { session } } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'consent',
+            },
+          },
         });
 
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button')!,
-          { 
-            type: 'standard',
-            theme: 'filled_blue',
-            size: 'large',
-            text: 'continue_with',
-            shape: 'rectangular',
-            width: 280,
-            logo_alignment: 'left'
-          }
-        );
+        if (session) {
+          handleExistingSession(session);
+        }
       } catch (error) {
         console.error('Error initializing Google Sign In:', error);
         setError('Failed to initialize Google Sign In. Please refresh the page.');
       }
     };
 
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = initializeGoogleSignIn;
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
+    initializeGoogleSignIn();
   }, []);
 
   const handleExistingSession = async (session: any) => {
@@ -86,38 +70,6 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
     } catch (error) {
       console.error('Error handling existing session:', error);
       setError('Failed to retrieve user data. Please try signing in again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async (response: any) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const { data, error: signInError } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: response.credential,
-        nonce: 'NONCE' // Replace with a secure nonce if needed
-      });
-
-      if (signInError) throw signInError;
-
-      if (data.user) {
-        if (!data.user.user_metadata?.role) {
-          setPendingUser(data.user);
-          setShowRoleModal(true);
-          return;
-        }
-
-        const userRole = data.user.user_metadata?.role;
-        setUserRole(userRole);
-        navigateBasedOnRole(userRole);
-      }
-    } catch (error: any) {
-      console.error('Error signing in with Google:', error);
-      setError(error.message || 'Failed to sign in with Google. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -151,6 +103,35 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.session) {
+        handleExistingSession(data.session);
+      }
+    } catch (error: any) {
+      console.error('Error signing in with Google:', error);
+      setError(error.message || 'Failed to sign in with Google. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {error && (
@@ -165,10 +146,14 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
         </div>
       )}
       
-      <div 
-        id="google-signin-button" 
-        className={`flex justify-center transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
-      />
+      <button
+        onClick={handleGoogleSignIn}
+        className="w-full flex items-center justify-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-lg border hover:bg-gray-50 transition-colors"
+        disabled={isLoading}
+      >
+        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+        Continue with Google
+      </button>
 
       {isLoading && (
         <div className="flex justify-center">
