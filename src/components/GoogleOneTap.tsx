@@ -17,26 +17,14 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [pendingUser, setPendingUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const generateNonce = async (): Promise<[string, string]> => {
-    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-    const encoder = new TextEncoder();
-    const encodedNonce = encoder.encode(nonce);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', encodedNonce);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return [nonce, hashedNonce];
-  };
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const initializeGoogleSignIn = async () => {
       try {
-        const [nonce, hashedNonce] = await generateNonce();
-        
         // Check for existing session
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
-          console.log('Existing session found:', sessionData.session);
           handleExistingSession(sessionData.session);
           return;
         }
@@ -44,9 +32,9 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
         window.google.accounts.id.initialize({
           client_id: '950012420743-a8udl7bn6kent06mn64k18poktm33r4d.apps.googleusercontent.com',
           callback: handleGoogleSignIn,
-          nonce: hashedNonce,
-          use_fedcm_for_prompt: true,
-          auto_select: true,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+          context: 'signin'
         });
 
         window.google.accounts.id.renderButton(
@@ -56,23 +44,14 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
             theme: 'filled_blue',
             size: 'large',
             text: 'continue_with',
-            shape: 'pill',
-            width: 280
+            shape: 'rectangular',
+            width: 280,
+            logo_alignment: 'left'
           }
         );
-
-        window.google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed()) {
-            console.error('One Tap not displayed:', notification.getNotDisplayedReason());
-          } else if (notification.isSkippedMoment()) {
-            console.log('One Tap skipped:', notification.getSkippedReason());
-          } else if (notification.isDismissedMoment()) {
-            console.log('One Tap dismissed:', notification.getDismissedReason());
-          }
-        });
       } catch (error) {
         console.error('Error initializing Google Sign In:', error);
-        setError('Failed to initialize Google Sign In');
+        setError('Failed to initialize Google Sign In. Please refresh the page.');
       }
     };
 
@@ -90,10 +69,10 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
 
   const handleExistingSession = async (session: any) => {
     try {
+      setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('No user found');
-      console.log('User data:', user);
 
       if (!user.user_metadata?.role) {
         setPendingUser(user);
@@ -106,20 +85,24 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       navigateBasedOnRole(userRole);
     } catch (error) {
       console.error('Error handling existing session:', error);
-      setError('Failed to retrieve user data');
+      setError('Failed to retrieve user data. Please try signing in again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleGoogleSignIn = async (response: any) => {
     try {
-      console.log('Google Sign In response:', response);
-      const { data, error } = await supabase.auth.signInWithIdToken({
+      setIsLoading(true);
+      setError(null);
+      
+      const { data, error: signInError } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
+        nonce: 'NONCE' // Replace with a secure nonce if needed
       });
 
-      if (error) throw error;
-      console.log('Supabase sign in response:', data);
+      if (signInError) throw signInError;
 
       if (data.user) {
         if (!data.user.user_metadata?.role) {
@@ -132,14 +115,17 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
         setUserRole(userRole);
         navigateBasedOnRole(userRole);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing in with Google:', error);
-      setError('Failed to sign in with Google');
+      setError(error.message || 'Failed to sign in with Google. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRoleSelection = async (selectedRole: 'owner' | 'user') => {
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.updateUser({
         data: { role: selectedRole }
       });
@@ -149,9 +135,11 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       setUserRole(selectedRole);
       setShowRoleModal(false);
       navigateBasedOnRole(selectedRole);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating user role:', error);
-      setError('Failed to update user role');
+      setError(error.message || 'Failed to update user role. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -166,17 +154,30 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
   return (
     <div className="space-y-4">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm animate-fade-in">
           {error}
+          <button 
+            onClick={() => setError(null)}
+            className="ml-2 text-red-700 hover:text-red-800 font-medium"
+          >
+            Try Again
+          </button>
         </div>
       )}
+      
       <div 
         id="google-signin-button" 
-        className="flex justify-center transform hover:scale-105 transition-transform duration-200"
+        className={`flex justify-center transition-opacity duration-200 ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
       />
+
+      {isLoading && (
+        <div className="flex justify-center">
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
       {showRoleModal && (
         <RoleSelectionModal
-          language="en"
           onSelect={handleRoleSelection}
           onClose={() => setShowRoleModal(false)}
         />

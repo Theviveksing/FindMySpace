@@ -1,21 +1,16 @@
 import React from 'react';
 import { Building2, GraduationCap } from 'lucide-react';
-import { Language } from '../App';
-import { translations } from '../translations';
 
 interface RoleSelectionModalProps {
-  language: Language;
   onSelect: (role: 'owner' | 'user') => void;
   onClose: () => void;
 }
 
-const RoleSelectionModal = ({ language, onSelect, onClose }: RoleSelectionModalProps) => {
-  const t = translations[language];
-
+const RoleSelectionModal = ({ onSelect, onClose }: RoleSelectionModalProps) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg max-w-md w-full p-6 animate-slide-up">
-        <h2 className="text-2xl font-bold text-center mb-6">{t.chooseAccountType}</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">Choose Your Account Type</h2>
         <div className="space-y-4">
           <button
             onClick={() => onSelect('user')}
@@ -25,8 +20,8 @@ const RoleSelectionModal = ({ language, onSelect, onClose }: RoleSelectionModalP
               <GraduationCap className="h-6 w-6 text-blue-600" />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold text-lg">{t.student}</h3>
-              <p className="text-gray-600">{t.studentDescription}</p>
+              <h3 className="font-semibold text-lg">Student</h3>
+              <p className="text-gray-600">Looking for accommodation near your university</p>
             </div>
           </button>
 
@@ -38,8 +33,8 @@ const RoleSelectionModal = ({ language, onSelect, onClose }: RoleSelectionModalP
               <Building2 className="h-6 w-6 text-blue-600" />
             </div>
             <div className="text-left">
-              <h3 className="font-semibold text-lg">{t.propertyOwner}</h3>
-              <p className="text-gray-600">{t.ownerDescription}</p>
+              <h3 className="font-semibold text-lg">Property Owner</h3>
+              <p className="text-gray-600">Want to list and manage your properties</p>
             </div>
           </button>
         </div>
