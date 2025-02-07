@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
+import RoleSelectionModal from './RoleSelectionModal';
 
 interface GoogleOneTapProps {
   setUserRole: (role: 'owner' | 'user' | null) => void;
@@ -13,6 +14,18 @@ const supabase = createClient(
 
 const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
   const navigate = useNavigate();
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [pendingUser, setPendingUser] = useState<any>(null);
+
+  const generateNonce = async (): Promise<[string, string]> => {
+    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+    const encoder = new TextEncoder();
+    const encodedNonce = encoder.encode(nonce);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encodedNonce);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return [nonce, hashedNonce];
+  };
 
   useEffect(() => {
     const initializeGoogleSignIn = async () => {
@@ -32,7 +45,6 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
         use_fedcm_for_prompt: true,
       });
 
-      // Render the traditional sign-in button
       window.google.accounts.id.renderButton(
         document.getElementById('google-signin-button')!,
         { 
@@ -45,14 +57,9 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
         }
       );
 
-      // Also show the One Tap prompt
       window.google.accounts.id.prompt();
     };
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
-
-    // Load Google script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -60,51 +67,29 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
     document.body.appendChild(script);
 
     return () => {
-      subscription.unsubscribe();
       document.body.removeChild(script);
     };
   }, []);
 
-  const handleAuthChange = async (event: string, session: any) => {
-    if (event === 'SIGNED_IN') {
-      handleExistingSession(session);
-    } else if (event === 'SIGNED_OUT') {
-      setUserRole(null);
-      navigate('/signin');
-    }
-  };
-
   const handleExistingSession = async (session: any) => {
     try {
-      // Get user's metadata from Supabase
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('No user found');
 
-      // Check if user has a role set in metadata
-      const userRole = user.user_metadata?.role || 'user';
-      setUserRole(userRole);
-
-      // Navigate based on role
-      if (userRole === 'owner') {
-        navigate('/owner/dashboard');
-      } else {
-        navigate('/listings');
+      // If user has no role, show role selection modal
+      if (!user.user_metadata?.role) {
+        setPendingUser(user);
+        setShowRoleModal(true);
+        return;
       }
+
+      const userRole = user.user_metadata?.role;
+      setUserRole(userRole);
+      navigateBasedOnRole(userRole);
     } catch (error) {
       console.error('Error handling existing session:', error);
-      // Handle error appropriately
     }
-  };
-
-  const generateNonce = async (): Promise<[string, string]> => {
-    const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
-    const encoder = new TextEncoder();
-    const encodedNonce = encoder.encode(nonce);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', encodedNonce);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashedNonce = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return [nonce, hashedNonce];
   };
 
   const handleGoogleSignIn = async (response: any) => {
@@ -112,31 +97,50 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
+        nonce: response.nonce,
       });
 
       if (error) throw error;
 
       if (data.user) {
-        // Set default role if not already set
+        // If user has no role, show role selection modal
         if (!data.user.user_metadata?.role) {
-          await supabase.auth.updateUser({
-            data: { role: 'user' }
-          });
+          setPendingUser(data.user);
+          setShowRoleModal(true);
+          return;
         }
 
-        // Get the role from metadata or use default
-        const userRole = data.user.user_metadata?.role || 'user';
+        const userRole = data.user.user_metadata?.role;
         setUserRole(userRole);
-
-        // Navigate based on role
-        if (userRole === 'owner') {
-          navigate('/owner/dashboard');
-        } else {
-          navigate('/listings');
-        }
+        navigateBasedOnRole(userRole);
       }
     } catch (error) {
       console.error('Error signing in with Google:', error);
+    }
+  };
+
+  const handleRoleSelection = async (selectedRole: 'owner' | 'user') => {
+    try {
+      // Update user metadata with selected role
+      const { error } = await supabase.auth.updateUser({
+        data: { role: selectedRole }
+      });
+
+      if (error) throw error;
+
+      setUserRole(selectedRole);
+      setShowRoleModal(false);
+      navigateBasedOnRole(selectedRole);
+    } catch (error) {
+      console.error('Error updating user role:', error);
+    }
+  };
+
+  const navigateBasedOnRole = (role: 'owner' | 'user') => {
+    if (role === 'owner') {
+      navigate('/owner/dashboard');
+    } else {
+      navigate('/listings');
     }
   };
 
@@ -144,6 +148,13 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
     <div className="space-y-4">
       <div id="google-signin-button" className="flex justify-center" />
       <div id="google-one-tap" />
+      {showRoleModal && (
+        <RoleSelectionModal
+          language="en"
+          onSelect={handleRoleSelection}
+          onClose={() => setShowRoleModal(false)}
+        />
+      )}
     </div>
   );
 };

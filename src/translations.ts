@@ -71,7 +71,14 @@ export const translations = {
     dragAndDrop: 'Drag and drop images here, or click to select files',
     uploadFiles: 'Upload Files',
     description: 'Property Description',
-    cancel: 'Cancel'
+    cancel: 'Cancel',
+
+    // Role Selection
+    chooseAccountType: 'Choose Your Account Type',
+    student: 'Student',
+    studentDescription: 'Looking for accommodation near your university',
+    propertyOwner: 'Property Owner',
+    ownerDescription: 'Want to list and manage your properties'
   },
   hi: {
     // Navbar
@@ -144,7 +151,14 @@ export const translations = {
     images: 'संपत्ति की तस्वीरें',
     dragAndDrop: 'तस्वीरें यहां खींचें और छोड़ें, या फ़ाइलें चुनने के लिए क्लिक करें',
     uploadFiles: 'फ़ाइलें अपलोड करें',
-    description: 'संपत् <boltAction type="file" filePath="src/translations.ts">ति का विवरण',
-    cancel: 'रद्द करें'
+    description: 'संपत्ति का विवरण',
+    cancel: 'रद्द करें',
+
+    // Role Selection
+    chooseAccountType: 'अपना खाता प्रकार चुनें',
+    student: 'छात्र',
+    studentDescription: 'अपने विश्वविद्यालय के पास आवास की तलाश में',
+    propertyOwner: 'संपत्ति मालिक',
+    ownerDescription: 'अपनी संपत्तियों को सूचीबद्ध और प्रबंधित करना चाहते हैं'
   }
 };
