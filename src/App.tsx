@@ -12,6 +12,7 @@ import LoadingScreen from './components/LoadingScreen';
 import { NotificationProvider } from './components/Notifications';
 
 export type UserRole = 'owner' | 'user' | null;
+export type Language = 'en' | 'hi';
 
 const supabase = createClient(
   'https://wjrhvzvuoufluqhiclnd.supabase.co',
@@ -21,6 +22,7 @@ const supabase = createClient(
 function App() {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
+  const [language, setLanguage] = useState<Language>('en');
 
   useEffect(() => {
     checkUser();
@@ -95,7 +97,7 @@ function App() {
               <Route path="/" element={<HomePage userRole={userRole} />} />
               <Route path="/listings" element={
                 <ProtectedUserRoute>
-                  <ListingsPage />
+                  <ListingsPage language={language} />
                 </ProtectedUserRoute>
               } />
               <Route path="/signin" element={
@@ -107,12 +109,12 @@ function App() {
               } />
               <Route path="/owner/dashboard" element={
                 <ProtectedOwnerRoute>
-                  <OwnerDashboard />
+                  <OwnerDashboard language={language} />
                 </ProtectedOwnerRoute>
               } />
               <Route path="/owner/create-listing" element={
                 <ProtectedOwnerRoute>
-                  <CreateListing />
+                  <CreateListing language={language} />
                 </ProtectedOwnerRoute>
               } />
             </Routes>
