@@ -16,6 +16,7 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
   const navigate = useNavigate();
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [pendingUser, setPendingUser] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const generateNonce = async (): Promise<[string, string]> => {
     const nonce = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
@@ -29,40 +30,56 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
 
   useEffect(() => {
     const initializeGoogleSignIn = async () => {
-      const [nonce, hashedNonce] = await generateNonce();
-
-      // Check for existing session
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (sessionData.session) {
-        handleExistingSession(sessionData.session);
-        return;
-      }
-
-      window.google.accounts.id.initialize({
-        client_id: '950012420743-a8udl7bn6kent06mn64k18poktm33r4d.apps.googleusercontent.com',
-        callback: handleGoogleSignIn,
-        nonce: hashedNonce,
-        use_fedcm_for_prompt: true,
-      });
-
-      window.google.accounts.id.renderButton(
-        document.getElementById('google-signin-button')!,
-        { 
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          shape: 'rectangular',
-          width: '100%'
+      try {
+        const [nonce, hashedNonce] = await generateNonce();
+        
+        // Check for existing session
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          console.log('Existing session found:', sessionData.session);
+          handleExistingSession(sessionData.session);
+          return;
         }
-      );
 
-      window.google.accounts.id.prompt();
+        window.google.accounts.id.initialize({
+          client_id: '950012420743-a8udl7bn6kent06mn64k18poktm33r4d.apps.googleusercontent.com',
+          callback: handleGoogleSignIn,
+          nonce: hashedNonce,
+          use_fedcm_for_prompt: true,
+          auto_select: true,
+        });
+
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin-button')!,
+          { 
+            type: 'standard',
+            theme: 'filled_blue',
+            size: 'large',
+            text: 'continue_with',
+            shape: 'pill',
+            width: 280
+          }
+        );
+
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed()) {
+            console.error('One Tap not displayed:', notification.getNotDisplayedReason());
+          } else if (notification.isSkippedMoment()) {
+            console.log('One Tap skipped:', notification.getSkippedReason());
+          } else if (notification.isDismissedMoment()) {
+            console.log('One Tap dismissed:', notification.getDismissedReason());
+          }
+        });
+      } catch (error) {
+        console.error('Error initializing Google Sign In:', error);
+        setError('Failed to initialize Google Sign In');
+      }
     };
 
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
+    script.defer = true;
     script.onload = initializeGoogleSignIn;
     document.body.appendChild(script);
 
@@ -76,8 +93,8 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('No user found');
+      console.log('User data:', user);
 
-      // If user has no role, show role selection modal
       if (!user.user_metadata?.role) {
         setPendingUser(user);
         setShowRoleModal(true);
@@ -89,21 +106,22 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       navigateBasedOnRole(userRole);
     } catch (error) {
       console.error('Error handling existing session:', error);
+      setError('Failed to retrieve user data');
     }
   };
 
   const handleGoogleSignIn = async (response: any) => {
     try {
+      console.log('Google Sign In response:', response);
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
         token: response.credential,
-        nonce: response.nonce,
       });
 
       if (error) throw error;
+      console.log('Supabase sign in response:', data);
 
       if (data.user) {
-        // If user has no role, show role selection modal
         if (!data.user.user_metadata?.role) {
           setPendingUser(data.user);
           setShowRoleModal(true);
@@ -116,12 +134,12 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       }
     } catch (error) {
       console.error('Error signing in with Google:', error);
+      setError('Failed to sign in with Google');
     }
   };
 
   const handleRoleSelection = async (selectedRole: 'owner' | 'user') => {
     try {
-      // Update user metadata with selected role
       const { error } = await supabase.auth.updateUser({
         data: { role: selectedRole }
       });
@@ -133,6 +151,7 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
       navigateBasedOnRole(selectedRole);
     } catch (error) {
       console.error('Error updating user role:', error);
+      setError('Failed to update user role');
     }
   };
 
@@ -146,8 +165,15 @@ const GoogleOneTap = ({ setUserRole }: GoogleOneTapProps) => {
 
   return (
     <div className="space-y-4">
-      <div id="google-signin-button" className="flex justify-center" />
-      <div id="google-one-tap" />
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+      <div 
+        id="google-signin-button" 
+        className="flex justify-center transform hover:scale-105 transition-transform duration-200"
+      />
       {showRoleModal && (
         <RoleSelectionModal
           language="en"
