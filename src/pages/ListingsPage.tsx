@@ -165,6 +165,18 @@ const ListingsPage = ({ language }: ListingsPageProps) => {
   const t = translations[language];
 
   useEffect(() => {
+    const checkPendingDetail = (list: Listing[]) => {
+      const pendingDetail = localStorage.getItem('pendingListingDetail');
+      if (pendingDetail) {
+        const listingId = parseInt(pendingDetail, 10);
+        const found = list.find(l => l.id === listingId);
+        if (found) {
+          setSelectedListing(found);
+        }
+        localStorage.removeItem('pendingListingDetail');
+      }
+    };
+
     // Load owner listings from localStorage
     try {
       const storedListings = localStorage.getItem('ownerListings');
@@ -207,13 +219,17 @@ const ListingsPage = ({ language }: ListingsPageProps) => {
             }
           };
         });
-        setListings([...mockListings, ...mappedOwnerListings]);
+        const allListings = [...mockListings, ...mappedOwnerListings];
+        setListings(allListings);
+        checkPendingDetail(allListings);
       } else {
         setListings(mockListings);
+        checkPendingDetail(mockListings);
       }
     } catch (e) {
       console.error("Error loading owner listings:", e);
       setListings(mockListings);
+      checkPendingDetail(mockListings);
     }
 
     // Simulate loading

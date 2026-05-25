@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, MapPin } from 'lucide-react';
 import { Language } from '../App';
 import { translations } from '../translations';
@@ -8,6 +9,7 @@ interface FeaturedListingsProps {
 }
 
 const FeaturedListings = ({ language }: FeaturedListingsProps) => {
+  const navigate = useNavigate();
   const t = translations[language];
 
   const featuredListings = [
@@ -98,7 +100,13 @@ const FeaturedListings = ({ language }: FeaturedListingsProps) => {
                     </span>
                     <span className="text-gray-600 text-sm">/month</span>
                   </div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem('pendingListingDetail', listing.id.toString());
+                      navigate('/listings');
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  >
                     View Details
                   </button>
                 </div>

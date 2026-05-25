@@ -23,6 +23,14 @@ function App() {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState<Language>('en');
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem('theme') || 'blue');
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('theme-blue', 'theme-emerald', 'theme-sunset', 'theme-cyberpunk');
+    root.classList.add(`theme-${theme}`);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     checkUser();
@@ -93,6 +101,8 @@ function App() {
             onSignOut={handleSignOut}
             language={language}
             setLanguage={setLanguage}
+            theme={theme}
+            setTheme={setTheme}
           />
           <main className="flex-grow">
             <Routes>

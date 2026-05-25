@@ -9,9 +9,11 @@ interface NavbarProps {
   onSignOut: () => Promise<void>;
   language: Language;
   setLanguage: (lang: Language) => void;
+  theme: string;
+  setTheme: (theme: string) => void;
 }
 
-const Navbar = ({ userRole, onSignOut, language, setLanguage }: NavbarProps) => {
+const Navbar = ({ userRole, onSignOut, language, setLanguage, theme, setTheme }: NavbarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const t = translations[language];
@@ -72,6 +74,30 @@ const Navbar = ({ userRole, onSignOut, language, setLanguage }: NavbarProps) => 
               </Link>
             )}
 
+            {/* Theme Switcher */}
+            <div className="flex items-center space-x-2 bg-gray-100/80 border border-gray-200 rounded-lg p-1.5 mr-2 shadow-inner">
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400 px-1">Theme</span>
+              <div className="flex items-center space-x-1.5">
+                {[
+                  { id: 'blue', color: 'bg-blue-600', ring: 'ring-blue-400', label: 'Classic Blue' },
+                  { id: 'emerald', color: 'bg-emerald-500', ring: 'ring-emerald-400', label: 'Forest Green' },
+                  { id: 'sunset', color: 'bg-orange-500', ring: 'ring-orange-400', label: 'Sunset Glow' },
+                  { id: 'cyberpunk', color: 'bg-pink-500', ring: 'ring-pink-400', label: 'Cyberpunk' },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    title={item.label}
+                    onClick={() => setTheme(item.id)}
+                    className={`h-4 w-4 rounded-full ${item.color} transition-all duration-300 transform hover:scale-125 focus:outline-none ${
+                      theme === item.id 
+                        ? `ring-2 ring-offset-2 ${item.ring} scale-110 shadow-[0_0_8px_rgba(0,0,0,0.2)]` 
+                        : 'opacity-70 hover:opacity-100'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+
             {/* Language Switcher */}
             <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-gray-200 mr-2 shadow-inner">
               <button
@@ -116,7 +142,28 @@ const Navbar = ({ userRole, onSignOut, language, setLanguage }: NavbarProps) => 
           </div>
 
           {/* Mobile Menu Button with Toggle */}
-          <div className="flex items-center space-x-4 md:hidden">
+          <div className="flex items-center space-x-3 md:hidden">
+            {/* Mobile Theme Switcher */}
+            <div className="flex items-center space-x-1.5 bg-gray-100 border border-gray-200 rounded-lg p-1.5">
+              {['blue', 'emerald', 'sunset', 'cyberpunk'].map((tId) => {
+                const colors: Record<string, string> = {
+                  blue: 'bg-blue-600',
+                  emerald: 'bg-emerald-500',
+                  sunset: 'bg-orange-500',
+                  cyberpunk: 'bg-pink-500',
+                };
+                return (
+                  <button
+                    key={tId}
+                    onClick={() => setTheme(tId)}
+                    className={`h-3.5 w-3.5 rounded-full ${colors[tId]} transition-all duration-200 focus:outline-none ${
+                      theme === tId ? 'ring-1 ring-offset-1 ring-gray-400 scale-110 shadow-sm' : 'opacity-65'
+                    }`}
+                  />
+                );
+              })}
+            </div>
+
             {/* Mobile Language Switcher */}
             <div className="flex items-center bg-gray-100 rounded-lg p-0.5 border border-gray-200">
               <button
