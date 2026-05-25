@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Wifi, Utensils, Star, X, Dumbbell, MapPin, Car, Trees, Music, Coffee, Bus, Filter, Bed, Bath, Lock, CheckCircle, Calendar, Users, Phone, User } from 'lucide-react';
+import { Search, Wifi, Utensils, Star, X, Dumbbell, MapPin, Car, Trees, Music, Coffee, Bus, Filter, Bed, Bath, Lock, CheckCircle, Calendar, Users, Phone, User, GraduationCap } from 'lucide-react';
 import { Language } from '../App';
 import { translations } from '../translations';
 
@@ -40,6 +40,7 @@ interface Listing {
     transport?: string[];
   };
   roomDetails?: RoomDetails;
+  collegeDistance?: string;
 }
 
 const mockListings: Listing[] = [
@@ -73,7 +74,8 @@ const mockListings: Listing[] = [
       bedType: 'single',
       washroomType: 'attached',
       cupboardsCount: 2
-    }
+    },
+    collegeDistance: "Walking distance (less than 500m) from Parul University"
   },
   {
     id: 2,
@@ -105,7 +107,8 @@ const mockListings: Listing[] = [
       bedType: 'double',
       washroomType: 'attached',
       cupboardsCount: 3
-    }
+    },
+    collegeDistance: "5 km (approx. 10 mins by bus/shuttle) from Parul University"
   },
   {
     id: 3,
@@ -137,7 +140,8 @@ const mockListings: Listing[] = [
       bedType: 'double',
       washroomType: 'attached',
       cupboardsCount: 4
-    }
+    },
+    collegeDistance: "15 km (approx. 30 mins by local train/bus) from Parul University"
   }
 ];
 
@@ -450,10 +454,16 @@ const ListingsPage = ({ language }: ListingsPageProps) => {
                         />
                         <div className="mt-4">
                           <div className="flex items-center space-x-2 text-gray-600 mb-2">
-                            <MapPin className="h-5 w-5" />
-                            <span>{selectedListing.location}</span>
+                            <MapPin className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium text-gray-800">{selectedListing.location}</span>
                           </div>
-                          <p className="text-gray-600">{selectedListing.description}</p>
+                          {selectedListing.collegeDistance && (
+                            <div className="flex items-center space-x-2 text-gray-600 mb-3 bg-blue-50/50 rounded-lg p-2.5 border border-blue-100/50">
+                              <GraduationCap className="h-5 w-5 text-purple-600" />
+                              <span className="text-sm font-semibold text-purple-900">{selectedListing.collegeDistance}</span>
+                            </div>
+                          )}
+                          <p className="text-gray-600 text-sm leading-relaxed mt-2">{selectedListing.description}</p>
                         </div>
 
                         {/* Room Details Card */}

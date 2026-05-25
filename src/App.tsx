@@ -108,9 +108,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage userRole={userRole} language={language} />} />
               <Route path="/listings" element={
-                <ProtectedUserRoute>
-                  <ListingsPage language={language} />
-                </ProtectedUserRoute>
+                <ListingsPage language={language} />
               } />
               <Route path="/signin" element={
                 userRole ? (
